@@ -5,7 +5,6 @@ package graph
 
 import (
 	"context"
-	"fmt"
 	"github.com/victor-nach/price-calculator/graph/generated"
 	"github.com/victor-nach/price-calculator/lib/validator"
 	"github.com/victor-nach/price-calculator/models"
@@ -30,10 +29,9 @@ func (r *queryResolver) CalculatePrice(ctx context.Context, typeArg models.Trade
 		price = cpUSD - margin*cpUSD
 	}
 
-	fmt.Println(cpUSD, price)
 	// get price in Naira
 	price *= exchangeRate
-	fmt.Println(cpUSD, price)
+
 	return price, nil
 }
 

@@ -2,6 +2,7 @@ package coindesk
 
 import (
 	"encoding/json"
+	"github.com/victor-nach/price-calculator/lib"
 	"github.com/victor-nach/price-calculator/lib/rerrors"
 	"github.com/victor-nach/price-calculator/models"
 	"io/ioutil"
@@ -15,6 +16,7 @@ type coindesk struct {
 }
 
 // ensure coindesk client implements price service interface
+var _ lib.PriceService = &coindesk{}
 
 // NewClient returns a new coindesk client
 func NewClient(baseUrl string) *coindesk {
