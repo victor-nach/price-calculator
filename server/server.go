@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -31,16 +30,15 @@ func NewServer(priceService lib.PriceService) *Server {
 		err := graphql.DefaultErrorPresenter(ctx, e)
 
 		err.Message = err.Error()
-		var myErr *rerrors.Err
-		if errors.As(e, &myErr) {
-			myErr, ok := e.(*rerrors.Err)
-			if ok {
-				err.Message = myErr.Message
-				err.Extensions = map[string]interface{}{
-					"code":      myErr.Code,
-					"errorType": myErr.ErrorType,
-				}
+		switch v := e.(type) {
+		case *rerrors.Err:
+			err.Message = v.Message
+			err.Extensions = map[string]interface{}{
+				"code":      v.Code,
+				"errorType": v.ErrorType,
 			}
+		default:
+			err.Message = err.Error()
 		}
 		return err
 	})
