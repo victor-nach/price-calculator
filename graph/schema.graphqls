@@ -3,6 +3,11 @@ type Query {
   calculatePrice(type: tradeType!, margin: Float!, exchangeRate: Float!): Float!
 }
 
+type Subscription {
+  # Calculate price
+  calculatePrice(type: tradeType!, margin: Float!, exchangeRate: Float!): Float!
+}
+
 enum tradeType {
   buy
   sell

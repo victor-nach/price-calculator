@@ -1,6 +1,9 @@
 package rerrors
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Internal error type
 type Err struct {
@@ -35,4 +38,14 @@ func (e *Err) Error() string {
 	b, _ := json.Marshal(err)
 
 	return string(b)
+}
+
+func NewErrFromJSON(errString string) (*Err, error) {
+	var er Err
+	err := json.Unmarshal([]byte(errString), &er)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(errString, err, er)
+	return &er, nil
 }

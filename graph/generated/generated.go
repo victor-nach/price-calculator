@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -36,6 +37,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Query() QueryResolver
+	Subscription() SubscriptionResolver
 }
 
 type DirectiveRoot struct {
@@ -45,10 +47,17 @@ type ComplexityRoot struct {
 	Query struct {
 		CalculatePrice func(childComplexity int, typeArg models.TradeType, margin float64, exchangeRate float64) int
 	}
+
+	Subscription struct {
+		CalculatePrice func(childComplexity int, typeArg models.TradeType, margin float64, exchangeRate float64) int
+	}
 }
 
 type QueryResolver interface {
 	CalculatePrice(ctx context.Context, typeArg models.TradeType, margin float64, exchangeRate float64) (float64, error)
+}
+type SubscriptionResolver interface {
+	CalculatePrice(ctx context.Context, typeArg models.TradeType, margin float64, exchangeRate float64) (<-chan float64, error)
 }
 
 type executableSchema struct {
@@ -78,6 +87,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.CalculatePrice(childComplexity, args["type"].(models.TradeType), args["margin"].(float64), args["exchangeRate"].(float64)), true
 
+	case "Subscription.calculatePrice":
+		if e.complexity.Subscription.CalculatePrice == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_calculatePrice_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.CalculatePrice(childComplexity, args["type"].(models.TradeType), args["margin"].(float64), args["exchangeRate"].(float64)), true
+
 	}
 	return 0, false
 }
@@ -96,6 +117,23 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			first = false
 			data := ec._Query(ctx, rc.Operation.SelectionSet)
 			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
+	case ast.Subscription:
+		next := ec._Subscription(ctx, rc.Operation.SelectionSet)
+
+		var buf bytes.Buffer
+		return func(ctx context.Context) *graphql.Response {
+			buf.Reset()
+			data := next()
+
+			if data == nil {
+				return nil
+			}
 			data.MarshalGQL(&buf)
 
 			return &graphql.Response{
@@ -133,6 +171,11 @@ var sources = []*ast.Source{
   calculatePrice(type: tradeType!, margin: Float!, exchangeRate: Float!): Float!
 }
 
+type Subscription {
+  # Calculate price
+  calculatePrice(type: tradeType!, margin: Float!, exchangeRate: Float!): Float!
+}
+
 enum tradeType {
   buy
   sell
@@ -160,6 +203,39 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 }
 
 func (ec *executionContext) field_Query_calculatePrice_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 models.TradeType
+	if tmp, ok := rawArgs["type"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+		arg0, err = ec.unmarshalNtradeType2githubᚗcomᚋvictorᚑnachᚋpriceᚑcalculatorᚋmodelsᚐTradeType(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["type"] = arg0
+	var arg1 float64
+	if tmp, ok := rawArgs["margin"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("margin"))
+		arg1, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["margin"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["exchangeRate"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("exchangeRate"))
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["exchangeRate"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_calculatePrice_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 models.TradeType
@@ -341,6 +417,58 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	res := resTmp.(*introspection.Schema)
 	fc.Result = res
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Subscription_calculatePrice(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Subscription_calculatePrice_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().CalculatePrice(rctx, args["type"].(models.TradeType), args["margin"].(float64), args["exchangeRate"].(float64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-resTmp.(<-chan float64)
+		if !ok {
+			return nil
+		}
+		return graphql.WriterFunc(func(w io.Writer) {
+			w.Write([]byte{'{'})
+			graphql.MarshalString(field.Alias).MarshalGQL(w)
+			w.Write([]byte{':'})
+			ec.marshalNFloat2float64(ctx, field.Selections, res).MarshalGQL(w)
+			w.Write([]byte{'}'})
+		})
+	}
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -1480,6 +1608,26 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		return graphql.Null
 	}
 	return out
+}
+
+var subscriptionImplementors = []string{"Subscription"}
+
+func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func() graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Subscription",
+	})
+	if len(fields) != 1 {
+		ec.Errorf(ctx, "must subscribe to exactly one stream")
+		return nil
+	}
+
+	switch fields[0].Name {
+	case "calculatePrice":
+		return ec._Subscription_calculatePrice(ctx, fields[0])
+	default:
+		panic("unknown field " + strconv.Quote(fields[0].Name))
+	}
 }
 
 var __DirectiveImplementors = []string{"__Directive"}

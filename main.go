@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/victor-nach/price-calculator/config"
+	"github.com/victor-nach/price-calculator/db/mongo"
 	"github.com/victor-nach/price-calculator/lib/coindesk"
 	"github.com/victor-nach/price-calculator/server"
 	"log"
@@ -15,7 +16,12 @@ func main() {
 	cfg := config.LoadSecrets()
 
 	coindeskClient := coindesk.NewClient(cfg.CoindeskURL)
-	srv := server.NewServer(coindeskClient)
+
+	mongoStore, _, err := mongo.New(cfg.DBURL, cfg.DBName)
+	if err != nil {
+		log.Fatalf("failed to open mongodb: %v", err)
+	}
+	srv := server.NewServer(coindeskClient, mongoStore)
 
 	// create channel to listen to shutdown signals
 	shutdownChan := make(chan os.Signal, 1)

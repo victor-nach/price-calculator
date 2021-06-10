@@ -8,6 +8,7 @@ import (
 const (
 	InvalidRequestErr = 101
 	InternalErr       = 102
+	DatabaseErr       = 103
 )
 
 var (
@@ -16,16 +17,19 @@ var (
 	errTypes = map[int]string{
 		InvalidRequestErr: "InvalidRequestErr",
 		InternalErr:       "InternalErr",
+		DatabaseErr:       "DatabaseErr",
 	}
 
 	errMessages = map[int]string{
 		InvalidRequestErr: "invalid request error",
 		InternalErr:       internalErrMsg,
+		DatabaseErr:       internalErrMsg,
 	}
 
 	errDetails = map[int]string{
 		InvalidRequestErr: "invalid request parameters",
 		InternalErr:       internalErrMsg,
+		DatabaseErr:       "database error",
 	}
 )
 
@@ -58,9 +62,16 @@ func Format(code int, err error) error {
 	return NewError(code, errorType(code), message(code), detail(code, err))
 }
 
+// Form Returns a formatted error type
+func Form(code int, err error) *Err {
+	return NewError(code, errorType(code), message(code), detail(code, err))
+}
+
 // LogFormat Returns a formatted error type and logs it on the standard output
 func LogFormat(code int, err error) error {
 	e := Format(code, err)
+	r, ok := e.(*Err)
+	fmt.Println(r, ok)
 	log.Println(e)
 	return e
 }

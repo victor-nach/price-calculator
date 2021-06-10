@@ -6,14 +6,18 @@ import (
 )
 
 const (
-	defaultPort = "8080"
-	defaultUrl  = "https://api.coindesk.com/v1/bpi/currentprice.json"
+	defaultPort   = "8080"
+	defaultUrl    = "https://api.coindesk.com/v1/bpi/currentprice.json"
+	defaultDbUrl  = "mongodb://localhost:27017"
+	defaultDbName = "pricer"
 )
 
 // Secrets contain all the config that this application needs
 type Secrets struct {
 	Port        string `json:"port"`
 	CoindeskURL string `json:"coindesk_url"`
+	DBName      string `json:"db_name"`
+	DBURL       string `json:"dburl"`
 }
 
 // LoadSecrets loads secrets from the environment and returns it
@@ -37,6 +41,18 @@ func LoadSecrets(filename ...string) *Secrets {
 		coindeskUrl = defaultUrl
 	}
 	secrets.CoindeskURL = coindeskUrl
+
+	dbUrl, ok := os.LookupEnv("DATABASE_URL")
+	if !ok {
+		dbUrl = defaultDbUrl
+	}
+	secrets.DBURL = dbUrl
+
+	dbName, ok := os.LookupEnv("DATABASE_NAME")
+	if !ok {
+		dbName = defaultDbName
+	}
+	secrets.DBName = dbName
 
 	return secrets
 }

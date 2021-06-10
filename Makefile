@@ -10,6 +10,8 @@ test:
 
 gen-mocks:
 	mockery --name=PriceService --recursive
+	mockery --name=Idgenerator --recursive
+	mockery --name=Datastore --recursive
 	go generate ./...
 
 local:
